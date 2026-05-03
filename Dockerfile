@@ -1,7 +1,7 @@
 # This file is adapted from https://github.com/jennyzzt/dgm.
 
 # Use an official Python runtime as the base image
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 # Install system-level dependencies, including git
 RUN apt-get update && apt-get install -y \
