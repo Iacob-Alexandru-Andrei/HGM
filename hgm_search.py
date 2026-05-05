@@ -28,7 +28,7 @@ def cooling_scale(
 ) -> float:
     if not cool_down:
         return 1.0
-    if max_task_evals == n_task_evals:
+    if n_task_evals >= max_task_evals:
         return 10000.0
     return max_task_evals**beta / (max_task_evals - n_task_evals) ** beta
 
@@ -76,7 +76,7 @@ def descendant_utility_measures(
     *,
     num_pseudo_descendant_evals: int,
 ) -> list[int | float]:
-    measures = list(node.get_pseudo_decendant_evals(num_pseudo_descendant_evals))
+    measures = list(node.get_pseudo_descendant_evals(num_pseudo_descendant_evals))
     for descendant in node.get_sub_tree()[1:]:
         measures.extend(descendant.utility_measures)
     return measures

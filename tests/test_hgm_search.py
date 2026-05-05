@@ -61,6 +61,7 @@ def test_thompson_sample_applies_hgm_cooldown_scale():
     assert rng.alphas.tolist() == [8.0]
     assert rng.betas.tolist() == [8.0]
     assert cooling_scale(n_task_evals=100, max_task_evals=100, beta=2.0, cool_down=True) == 10000.0
+    assert cooling_scale(n_task_evals=101, max_task_evals=100, beta=2.0, cool_down=True) == 10000.0
 
 
 def test_thompson_sample_rejects_empty_candidates():
@@ -94,4 +95,14 @@ def test_descendant_utility_measures_uses_hgm_node_subtree_semantics():
         0,
         1,
     ]
+    assert root.utility_measures == [1, 0]
+
+
+def test_node_descendant_eval_helpers_do_not_mutate_self_evals():
+    root = Node("root", utility_measures=[1, 0], id=0)
+    child = Node("child", utility_measures=[1], parent_id=0, id=1)
+    root.add_child(child)
+
+    assert root.get_decendant_evals(num_pseudo=10) == [1, 0, 1]
+    assert root.get_descendant_evals(num_pseudo=10) == [1, 0, 1]
     assert root.utility_measures == [1, 0]
