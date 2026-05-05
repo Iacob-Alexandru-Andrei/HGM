@@ -20,6 +20,11 @@ from datasets import load_dataset
 from utils.docker_utils import copy_src_files
 
 import hgm_utils
+from hgm_search import (
+    descendant_utility_measures,
+    should_expand,
+    thompson_sample_index,
+)
 from config import load_config
 from tree import Node
 from utils.common_utils import load_json_file
@@ -358,23 +363,13 @@ def main():
     )
 
     def TS_sample(evals):
-        alphas = [1 + np.sum(de) for de in evals]
-        betas = [1 + len(de) - np.sum(de) for de in evals]
-        if opt_cfg.cool_down:
-            alphas = np.array(alphas) * (
-                10000
-                if exec_cfg.max_task_evals == hgm_utils.n_task_evals
-                else exec_cfg.max_task_evals**opt_cfg.beta
-                / (exec_cfg.max_task_evals - hgm_utils.n_task_evals) ** opt_cfg.beta
-            )
-            betas = np.array(betas) * (
-                10000
-                if exec_cfg.max_task_evals == hgm_utils.n_task_evals
-                else exec_cfg.max_task_evals**opt_cfg.beta
-                / (exec_cfg.max_task_evals - hgm_utils.n_task_evals) ** opt_cfg.beta
-            )
-        thetas = np.random.beta(alphas, betas)
-        return np.argmax(thetas)
+        return thompson_sample_index(
+            evals,
+            n_task_evals=hgm_utils.n_task_evals,
+            max_task_evals=exec_cfg.max_task_evals,
+            beta=opt_cfg.beta,
+            cool_down=opt_cfg.cool_down,
+        )
 
     n_pending_expands = 0
     n_pending_measures = 0
@@ -388,7 +383,10 @@ def main():
                 if np.isfinite(node.mean_utility) and node.mean_utility > 0
             ]
             decendant_evals = [
-                node.get_decendant_evals(num_pseudo=opt_cfg.n_pseudo_descendant_evals)
+                descendant_utility_measures(
+                    node,
+                    num_pseudo_descendant_evals=opt_cfg.n_pseudo_descendant_evals,
+                )
                 for node in nodes
             ]
             selected_node = nodes[TS_sample(decendant_evals)]
@@ -410,9 +408,11 @@ def main():
             if hgm_utils.n_task_evals >= exec_cfg.max_task_evals:
                 return
 
-            if (
-                hgm_utils.n_task_evals**opt_cfg.alpha
-                >= len(hgm_utils.nodes) - 1 + n_pending_expands
+            if should_expand(
+                n_task_evals=hgm_utils.n_task_evals,
+                node_count=len(hgm_utils.nodes),
+                n_pending_expands=n_pending_expands,
+                alpha=opt_cfg.alpha,
             ):
                 n_pending_expands += 1
                 is_expand = True
